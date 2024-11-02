@@ -15,15 +15,6 @@ load_dotenv()
 class SeleniumBot:
  
     def __init__(self, headless:bool = False) -> None:
-        #Opções de download no navegador
-        # chrome_options = Options()
-        # chrome_options.add_experimental_option("prefs", {
-        #     "download.default_directory": r'resources',  # Define o diretório de download
-        #     "download.prompt_for_download": False,       # Desabilita o prompt de download
-        #     "download.directory_upgrade": True,
-        #     "safebrowsing.enabled": True                 # Evita avisos de 
-        # })
-
         self.navegador = Driver(uc=True, headless=headless)
         self.wait = WebDriverWait(self.navegador, 20)
         #Carregando credencias
@@ -39,7 +30,7 @@ class SeleniumBot:
     def fechar_popup(self):
         """Fecha o banner de privacidade, se estiver aberto"""
         try:
-            close_btn =WebDriverWait(self.navegador, 10).until(
+            close_btn = WebDriverWait(self.navegador, 10).until(
                 EC.element_to_be_clickable((By.XPATH, '//*[@id="onetrust-accept-btn-handler"]'))
             )
             close_btn.click()
@@ -95,11 +86,31 @@ class SeleniumBot:
             except NoSuchElementException:
                 print(f"Arquivo {n} não encontrado.")
 
+    
+    def mesclar_excluir(self, opcao: str, caminho_path: str, dataframes: list = None) -> None:
+        arquivos = os.listdir(caminho_path)
+
+        if opcao.lower() == 'mesclar':
+            for arquivo in arquivos:
+                if arquivo.endswith('.xlsx'):
+                    # Cria o caminho completo
+                    caminho_arquivo = os.path.join(caminho_path, arquivo)
+                    df = pd.read_excel(caminho_arquivo)
+                    dataframes.append(df)
+        
+        elif opcao.lower() == 'excluir':
+            for arquivo in arquivos:
+                if arquivo.endswith('.xlsx'):
+                    os.remove(os.path.join('downloaded_files', arquivo))
+                    print(f'{arquivo} foi excluído.')
+
+
+
 
     def action(self) -> None:
         try:
            
-            diretorio = 'resources'
+            diretorio = 'downloaded_files'
             dataframes = []
 
             self.fazer_login(str(self.api_key), str(self.senha))
@@ -110,23 +121,16 @@ class SeleniumBot:
 
             sleep(2)
 
-            # Verifica os arquivos baixados
-            arquivos = os.listdir(diretorio)
-            for arquivo in arquivos:
-                if arquivo.endswith('.xlsx'):
-                    # Cria o caminho completo
-                    caminho_arquivo = os.path.join(diretorio, arquivo)
-                    df = pd.read_excel(caminho_arquivo)
-                    dataframes.append(df)
+            self.mesclar_excluir('mesclar', diretorio, dataframes)
 
             if dataframes:
-                mesclar_dataframe = pd.concat(dataframes, ignore_index=True)
+                arquivo_consolidado = pd.concat(dataframes, ignore_index=True)
                 # Salva o DataFrame combinado em um novo arquivo .xlsx
-                caminho_saida = os.path.join(diretorio, 'arquivo_combinado.xlsx')
-                mesclar_dataframe.to_excel(caminho_saida, index=False)
-                print(f"Arquivo combinado salvo em: {caminho_saida}")
+                arquivo_consolidado.to_excel('arquivo_mesclado.xlsx', index=False)
             else:
                 print("Nenhum arquivo para combinar.")
+            
+            self.mesclar_excluir('excluir', diretorio)
             
         finally:
             self.navegador.quit()  # Garante que o navegador seja fechado
