@@ -1,12 +1,25 @@
 from models.selenium import SeleniumBot
-
+import os
 
 def main():
-    
-    bot = SeleniumBot()
-    bot.abrir_navegador('https://www.lme.com/en/Account/Login')
 
-    bot.action()
+    
+
+    try:
+        
+        bot = SeleniumBot()
+        bot.abrir_navegador('https://www.lme.com/en/Account/Login')
+
+        bot.action()
+
+    
+    except Exception as ex:
+        print(ex)
+
+
+
+        
+
 
 
 

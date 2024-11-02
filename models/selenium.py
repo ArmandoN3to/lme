@@ -8,6 +8,7 @@ from selenium.webdriver.chrome.options import Options
 from time import sleep
 from dotenv import load_dotenv
 import os
+import pandas as pd
 
 
 load_dotenv()
@@ -15,13 +16,13 @@ class SeleniumBot:
  
     def __init__(self, headless:bool = False) -> None:
         #Opções de download no navegador
-        chrome_options = Options()
-        chrome_options.add_experimental_option("prefs", {
-            "download.default_directory": r'resources',  # Define o diretório de download
-            "download.prompt_for_download": False,       # Desabilita o prompt de download
-            "download.directory_upgrade": True,
-            "safebrowsing.enabled": True                 # Evita avisos de 
-        })
+        # chrome_options = Options()
+        # chrome_options.add_experimental_option("prefs", {
+        #     "download.default_directory": r'resources',  # Define o diretório de download
+        #     "download.prompt_for_download": False,       # Desabilita o prompt de download
+        #     "download.directory_upgrade": True,
+        #     "safebrowsing.enabled": True                 # Evita avisos de 
+        # })
 
         self.navegador = Driver(uc=True, headless=headless)
         self.wait = WebDriverWait(self.navegador, 20)
@@ -97,10 +98,35 @@ class SeleniumBot:
 
     def action(self) -> None:
         try:
+           
+            diretorio = 'resources'
+            dataframes = []
+
             self.fazer_login(str(self.api_key), str(self.senha))
             sleep(3)
             self.buscar_relatorios()
             sleep(4)
             self.baixar_arquivos()
+
+            sleep(2)
+
+            # Verifica os arquivos baixados
+            arquivos = os.listdir(diretorio)
+            for arquivo in arquivos:
+                if arquivo.endswith('.xlsx'):
+                    # Cria o caminho completo
+                    caminho_arquivo = os.path.join(diretorio, arquivo)
+                    df = pd.read_excel(caminho_arquivo)
+                    dataframes.append(df)
+
+            if dataframes:
+                mesclar_dataframe = pd.concat(dataframes, ignore_index=True)
+                # Salva o DataFrame combinado em um novo arquivo .xlsx
+                caminho_saida = os.path.join(diretorio, 'arquivo_combinado.xlsx')
+                mesclar_dataframe.to_excel(caminho_saida, index=False)
+                print(f"Arquivo combinado salvo em: {caminho_saida}")
+            else:
+                print("Nenhum arquivo para combinar.")
+            
         finally:
             self.navegador.quit()  # Garante que o navegador seja fechado
