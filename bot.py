@@ -13,11 +13,5 @@ def main():
         print(ex)
 
 
-
-        
-
-
-
-
 if __name__ == '__main__':
     main()

@@ -5,13 +5,15 @@ from selenium.webdriver.support import expected_conditions as EC
 from seleniumbase import Driver
 from selenium.common.exceptions import NoSuchElementException, TimeoutException
 from selenium.webdriver.chrome.options import Options
+from botcity.maestro import *
 from time import sleep
 from dotenv import load_dotenv
 import os
 import pandas as pd
 
-
+BotMaestroSDK.RAISE_NOT_CONNECTED = False
 load_dotenv()
+
 class SeleniumBot:
  
     def __init__(self, headless:bool = False) -> None:
@@ -104,14 +106,24 @@ class SeleniumBot:
                     os.remove(os.path.join('downloaded_files', arquivo))
                     print(f'{arquivo} foi excluído.')
 
-
-
-
-    def action(self) -> None:
+    def action(self, execution = None) -> None:
         try:
-           
+            maestro = BotMaestroSDK.from_sys_args()
+            execution = maestro.get_execution()
+            
+            # Informações da tarefa que está sendo executada
+            print(f"Task ID is: {execution.task_id}")
+            print(f"Task Parameters are: {execution.parameters}")
+
             diretorio = 'downloaded_files'
             dataframes = []
+
+            maestro.alert(
+                task_id=execution.task_id,
+                title="Iniciando automação",
+                message="Automação iniciando conforme planejado",
+                alert_type=AlertType.INFO
+            )
 
             self.fazer_login(str(self.api_key), str(self.senha))
             sleep(3)
@@ -129,8 +141,38 @@ class SeleniumBot:
                 arquivo_consolidado.to_excel('arquivo_mesclado.xlsx', index=False)
             else:
                 print("Nenhum arquivo para combinar.")
-            
+
             self.mesclar_excluir('excluir', diretorio)
+
+            # A extensão é CSV
+            maestro.post_artifact(
+                task_id=execution.task_id,
+                artifact_name="arquivo_mesclado",
+                filepath="arquivo_mesclado.xlsx"
+            )
+
+
+            status_finish = AutomationTaskFinishStatus.SUCCESS,
+            message_finish = "Tarefa foi concluída com sucesso.",
+
+        except Exception as ex:
+            print(ex)
+            maestro.alert(
+                task_id=execution.task_id,
+                title="Erro na automação",
+                message=f"Nossa automação finalizou com erro: {ex}",
+                alert_type=AlertType.INFO
+            )
+            status_finish = AutomationTaskFinishStatus.FAILED,
+            message_finish = "Tarefa foi concluída com erro.",
+        
+            maestro.error(task_id=execution.task_id, exception=ex)
             
         finally:
             self.navegador.quit()  # Garante que o navegador seja fechado
+
+            maestro.finish_task(
+                task_id= execution.task_id,
+                status= status_finish,
+                message= message_finish
+            )
