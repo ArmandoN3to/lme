@@ -2,6 +2,7 @@
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+from .alerts import MaestroAlerts
 from seleniumbase import Driver
 from selenium.common.exceptions import NoSuchElementException, TimeoutException
 from selenium.webdriver.chrome.options import Options
@@ -110,6 +111,7 @@ class SeleniumBot:
         try:
             maestro = BotMaestroSDK.from_sys_args()
             execution = maestro.get_execution()
+            maestro_alerts = MaestroAlerts(maestro,execution.task_id)
             
             # Informações da tarefa que está sendo executada
             print(f"Task ID is: {execution.task_id}")
@@ -118,12 +120,8 @@ class SeleniumBot:
             diretorio = 'downloaded_files'
             dataframes = []
 
-            maestro.alert(
-                task_id=execution.task_id,
-                title="Iniciando automação",
-                message="Automação iniciando conforme planejado",
-                alert_type=AlertType.INFO
-            )
+            
+            maestro_alerts.alert_info("Iniciando automação","Automação iniciando conforme planejado")
 
             self.fazer_login(str(self.api_key), str(self.senha))
             sleep(3)
@@ -144,12 +142,8 @@ class SeleniumBot:
 
             self.mesclar_excluir('excluir', diretorio)
 
-            # A extensão é CSV
-            maestro.post_artifact(
-                task_id=execution.task_id,
-                artifact_name="arquivo_mesclado",
-                filepath="arquivo_mesclado.xlsx"
-            )
+           
+            maestro_alerts.post_artifact("arquivo_mesclado","arquivo_mesclado.xlsx")
 
 
             status_finish = AutomationTaskFinishStatus.SUCCESS,
@@ -157,12 +151,8 @@ class SeleniumBot:
 
         except Exception as ex:
             print(ex)
-            maestro.alert(
-                task_id=execution.task_id,
-                title="Erro na automação",
-                message=f"Nossa automação finalizou com erro: {ex}",
-                alert_type=AlertType.INFO
-            )
+        
+            maestro_alerts.alert_info("Erro na automação",f"Nossa automação finalizou com erro: {ex}")
             status_finish = AutomationTaskFinishStatus.FAILED,
             message_finish = "Tarefa foi concluída com erro.",
         
@@ -171,8 +161,9 @@ class SeleniumBot:
         finally:
             self.navegador.quit()  # Garante que o navegador seja fechado
 
-            maestro.finish_task(
-                task_id= execution.task_id,
-                status= status_finish,
-                message= message_finish
-            )
+            # maestro.finish_task(
+            #     task_id= execution.task_id,
+            #     status= status_finish,
+            #     message= message_finish
+            # )
+            maestro_alerts.finish_task(status_finish,message_finish)
